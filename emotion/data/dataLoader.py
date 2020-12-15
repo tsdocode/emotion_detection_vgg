@@ -1,8 +1,11 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-
+import os
 import numpy as np
 import pandas as pd
+
+root = os.getcwd() 
+
 
 
 
@@ -19,14 +22,12 @@ class EmotionDataset(Dataset):
 
 class EmotionData():
     def __init__(self):
-        data_dict = self.__load_data__()
-        self.train_data = data_dict['train']
-        self.test_data = data_dict['test']
-        self.valid_data = data_dict['valid']
+        self.data_dict = self.__load_data__()
 
     def __load_data__(self):
         #Reading file
-        df = pd.read_csv('fer2013.csv')
+        data_dir = os.path.join(root, 'emotion', 'data', 'fer2013.csv')
+        df = pd.read_csv(data_dir)
 
         groups = [i for _, i in df.groupby('Usage')]
         training_data = groups[2]
@@ -50,3 +51,16 @@ class EmotionData():
             'test' : EmotionDataset(X_test, y_test)
         }
 
+class EmotionDataloader:
+    def __init__(self, data_dict : dict,
+                        batch_size : int ,
+                        workers : int):
+        self.loader_dict = {
+            x : DataLoader(data_dict[x], batch_size=batch_size,
+                        shuffle=True, num_workers=workers)
+            for x in data_dict            
+        }
+        self.datasize_dict = {
+            x : len(data_dict[x])
+            for x in data_dict
+        }

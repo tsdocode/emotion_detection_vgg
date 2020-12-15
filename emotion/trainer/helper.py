@@ -1,7 +1,6 @@
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import torch
-from emotion.model.vgg19 import vgg19
 import time
 import copy
 
@@ -16,7 +15,8 @@ def train_model(model, dataloaders , dataset_sizes, criterion, optimizer, schedu
         print('-' * 10)
 
         # Each epoch has a training and validation phase
-        for phase in ['train', 'val']:
+        for phase in ['train', 'valid']:
+            temp = 0
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
@@ -26,9 +26,10 @@ def train_model(model, dataloaders , dataset_sizes, criterion, optimizer, schedu
             running_corrects = 0
 
             # Iterate over data.
-            for idx , inputs, labels in enumerate(dataloaders[phase]):
+            for idx ,( inputs, labels) in enumerate(dataloaders[phase]):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+                temp += inputs.size(0)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -48,18 +49,22 @@ def train_model(model, dataloaders , dataset_sizes, criterion, optimizer, schedu
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
+
+                print('{}-{}/{} Loss: {:.4f} Acc: {:.4f}'.format(
+                  phase, idx, len(dataloaders[phase]) , running_loss / temp, running_corrects / temp), end = '\r')
+
             if phase == 'train':
                 scheduler.step()
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
-            if (index % 100 == 0):
-                print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+            
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+            phase, epoch_loss, epoch_acc))
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
+            if phase == 'valid' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
